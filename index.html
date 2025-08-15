@@ -1,177 +1,172 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>鑰匙開門整除遊戲</title>
-<style>
-  body {
-    margin: 0;
-    padding: 0;
-    font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-    background-color: #e0f7ff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-  #game-container {
-    width: 90%;
-    max-width: 600px;
-    text-align: center;
-    position: relative;
-  }
-  #door-container {
-    position: relative;
-    margin-bottom: 50px;
-  }
-  #door {
-    width: 200px;
-    height: 300px;
-    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Wooden_door_icon.svg/1200px-Wooden_door_icon.svg.png'); /* 替換成開源門圖片 */
-    background-size: cover;
-    margin: 0 auto;
-    position: relative;
-  }
-  #door-number {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 2em;
-    font-weight: bold;
-    color: white;
-    text-shadow: 1px 1px 3px black;
-  }
-  .key {
-    width: 60px;
-    height: 60px;
-    margin: 10px;
-    cursor: grab;
-    user-select: none;
-    position: absolute;
-    transition: transform 0.2s;
-  }
-  #feedback {
-    font-size: 1.5em;
-    margin-top: 20px;
-    height: 30px;
-  }
-  .feedback-correct { color: #28a745; }
-  .feedback-incorrect { color: #dc3545; }
-  #score {
-    font-size: 1.2em;
-    margin-bottom: 10px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>因數冒險遊戲</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-image: url('https://img.freepik.com/free-vector/cute-cartoon-background_52683-6779.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+        .container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            border: 3px solid #ffcc00;
+        }
+        h1 {
+            color: #ff4444;
+            text-shadow: 2px 2px #fff;
+        }
+        input, button {
+            padding: 12px;
+            margin: 10px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: 2px solid #ff9900;
+        }
+        button {
+            background-color: #ff4444;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.1);
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+            color: #333;
+            background-color: #e6f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px dashed #3399ff;
+        }
+        #cartoonCharacter {
+            width: 100px;
+            margin-top: 10px;
+            transition: transform 0.5s;
+        }
+        .animate-character {
+            transform: scale(1.2) rotate(10deg);
+        }
+    </style>
 </head>
 <body>
-<div id="game-container">
-  <div id="score">分數：0</div>
-  <div id="door-container">
-    <div id="door">
-      <div id="door-number"></div>
+    <div class="container">
+        <h1>因數冒險遊戲</h1>
+        <p>輸入一個最大數字，來場因數探險吧！</p>
+        <input type="number" id="maxNumber" placeholder="輸入最大數字" min="1">
+        <button onclick="playGame()">開始冒險！</button>
+        <div id="result"></div>
+        <img id="cartoonCharacter" src="https://img.freepik.com/free-vector/cute-cartoon-monster_1308-150159.jpg" alt="Cartoon Character">
     </div>
-  </div>
-  <div id="keys-container"></div>
-  <div id="feedback"></div>
-</div>
 
-<script>
-const questions = [
-  { number: 72, keys: [2,3,4,6,8,9] },
-  { number: 45, keys: [2,3,5,7,9,10] },
-  { number: 60, keys: [2,3,4,5,6,7] },
-  { number: 91, keys: [3,5,7,9,11,13] },
-  { number: 100, keys: [2,4,5,10,20,25] }
-];
+    <script>
+        // 音效來源：FreeSound (免費、免版權，支援 CORS)
+        const clickSound = new Audio('https://freesound.org/data/previews/171/171671_2437358-lq.mp3'); // 卡通點擊音效
+        const successSound = new Audio('https://freesound.org/data/previews/151/151605_2437358-lq.mp3'); // 成功音效
+        const errorSound = new Audio('https://freesound.org/data/previews/395/395153_2437358-lq.mp3'); // 錯誤音效
 
-let currentIndex = 0;
-let score = 0;
+        // 音效播放函數，包含錯誤處理
+        function playSound(audio) {
+            audio.play().catch(error => {
+                console.warn('音效播放失敗:', error.message);
+                document.getElementById('result').innerHTML += '<p style="color: orange;">音效載入失敗，遊戲繼續運行！</p>';
+            });
+        }
 
-const doorNumber = document.getElementById('door-number');
-const keysContainer = document.getElementById('keys-container');
-const feedback = document.getElementById('feedback');
-const scoreText = document.getElementById('score');
+        function playGame() {
+            const maxNumber = parseInt(document.getElementById('maxNumber').value);
+            const resultDiv = document.getElementById('result');
+            const character = document.getElementById('cartoonCharacter');
 
-function startGame() {
-  currentIndex = 0;
-  score = 0;
-  shuffleArray(questions);
-  showQuestion();
-}
+            // 播放點擊音效
+            playSound(clickSound);
 
-function showQuestion() {
-  feedback.innerText = '';
-  const q = questions[currentIndex];
-  doorNumber.innerText = q.number;
-  keysContainer.innerHTML = '';
-  
-  q.keys.forEach((num, i) => {
-    const key = document.createElement('img');
-    key.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Key_icon.svg/1200px-Key_icon.svg.png'; // 開源鑰匙圖片
-    key.classList.add('key');
-    key.draggable = true;
-    key.dataset.value = num;
-    key.style.left = `${50 + i*70}px`;
-    key.style.top = `400px`;
-    keysContainer.appendChild(key);
+            if (isNaN(maxNumber) || maxNumber < 1) {
+                resultDiv.innerHTML = '<p style="color: red;">請輸入一個有效的正整數！</p>';
+                playSound(errorSound);
+                return;
+            }
 
-    key.addEventListener('dragstart', dragStart);
-    key.addEventListener('dragend', dragEnd);
-  });
-}
+            // 隨機生成數字
+            const randomNum = Math.floor(Math.random() * maxNumber) + 1;
+            const factors = findFactors(randomNum);
 
-let draggedKey = null;
+            // 顯示結果並播放成功音效
+            resultDiv.innerHTML = `
+                <p>冒險數字: <strong>${randomNum}</strong></p>
+                <p>找到的因數: ${factors.length > 0 ? factors.join(', ') : '無因數'}</p>
+            `;
+            playSound(successSound);
 
-function dragStart(e) {
-  draggedKey = e.target;
-  e.dataTransfer.setData('text/plain', '');
-}
+            // 觸發卡通角色動畫
+            character.classList.add('animate-character');
+            setTimeout(() => {
+                character.classList.remove('animate-character');
+            }, 500);
+        }
 
-function dragEnd(e) {
-  const doorRect = document.getElementById('door').getBoundingClientRect();
-  const keyRect = draggedKey.getBoundingClientRect();
-
-  // 判斷鑰匙是否拖到門上
-  if (keyRect.left + keyRect.width/2 > doorRect.left &&
-      keyRect.left + keyRect.width/2 < doorRect.right &&
-      keyRect.top + keyRect.height/2 > doorRect.top &&
-      keyRect.top + keyRect.height/2 < doorRect.bottom) {
-    
-    const keyValue = parseInt(draggedKey.dataset.value);
-    const doorValue = questions[currentIndex].number;
-
-    if (doorValue % keyValue === 0) {
-      feedback.innerText = '門打開了！';
-      feedback.className = 'feedback-correct';
-      score++;
-    } else {
-      feedback.innerText = 'X！不能打開！';
-      feedback.className = 'feedback-incorrect';
-    }
-
-    scoreText.innerText = `分數：${score}`;
-    currentIndex++;
-    if (currentIndex < questions.length) {
-      setTimeout(showQuestion, 1200);
-    } else {
-      setTimeout(() => { feedback.innerText = `遊戲結束！總分：${score}`; }, 1200);
-    }
-  }
-}
-
-// 拖曳事件必須阻止預設
-document.addEventListener('dragover', e => e.preventDefault());
-
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-startGame();
-</script>
+        function findFactors(num) {
+            const factors = [];
+            for (let i = 1; i <= num; i++) {
+                if (num % i === 0) {
+                    factors.push(i);
+                }
+            }
+            return factors;
+        }
+    </script>
 </body>
 </html>
