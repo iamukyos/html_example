@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鑰匙開門整除遊戲</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+    background-color: #e0f7ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  #game-container {
+    width: 90%;
+    max-width: 600px;
+    text-align: center;
+    position: relative;
+  }
+  #door-container {
+    position: relative;
+    margin-bottom: 50px;
+  }
+  #door {
+    width: 200px;
+    height: 300px;
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Wooden_door_icon.svg/1200px-Wooden_door_icon.svg.png'); /* 替換成開源門圖片 */
+    background-size: cover;
+    margin: 0 auto;
+    position: relative;
+  }
+  #door-number {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2em;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 3px black;
+  }
+  .key {
+    width: 60px;
+    height: 60px;
+    margin: 10px;
+    cursor: grab;
+    user-select: none;
+    position: absolute;
+    transition: transform 0.2s;
+  }
+  #feedback {
+    font-size: 1.5em;
+    margin-top: 20px;
+    height: 30px;
+  }
+  .feedback-correct { color: #28a745; }
+  .feedback-incorrect { color: #dc3545; }
+  #score {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+<div id="game-container">
+  <div id="score">分數：0</div>
+  <div id="door-container">
+    <div id="door">
+      <div id="door-number"></div>
+    </div>
+  </div>
+  <div id="keys-container"></div>
+  <div id="feedback"></div>
+</div>
+
+<script>
+const questions = [
+  { number: 72, keys: [2,3,4,6,8,9] },
+  { number: 45, keys: [2,3,5,7,9,10] },
+  { number: 60, keys: [2,3,4,5,6,7] },
+  { number: 91, keys: [3,5,7,9,11,13] },
+  { number: 100, keys: [2,4,5,10,20,25] }
+];
+
+let currentIndex = 0;
+let score = 0;
+
+const doorNumber = document.getElementById('door-number');
+const keysContainer = document.getElementById('keys-container');
+const feedback = document.getElementById('feedback');
+const scoreText = document.getElementById('score');
+
+function startGame() {
+  currentIndex = 0;
+  score = 0;
+  shuffleArray(questions);
+  showQuestion();
+}
+
+function showQuestion() {
+  feedback.innerText = '';
+  const q = questions[currentIndex];
+  doorNumber.innerText = q.number;
+  keysContainer.innerHTML = '';
+  
+  q.keys.forEach((num, i) => {
+    const key = document.createElement('img');
+    key.src = 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Key_icon.svg/1200px-Key_icon.svg.png'; // 開源鑰匙圖片
+    key.classList.add('key');
+    key.draggable = true;
+    key.dataset.value = num;
+    key.style.left = `${50 + i*70}px`;
+    key.style.top = `400px`;
+    keysContainer.appendChild(key);
+
+    key.addEventListener('dragstart', dragStart);
+    key.addEventListener('dragend', dragEnd);
+  });
+}
+
+let draggedKey = null;
+
+function dragStart(e) {
+  draggedKey = e.target;
+  e.dataTransfer.setData('text/plain', '');
+}
+
+function dragEnd(e) {
+  const doorRect = document.getElementById('door').getBoundingClientRect();
+  const keyRect = draggedKey.getBoundingClientRect();
+
+  // 判斷鑰匙是否拖到門上
+  if (keyRect.left + keyRect.width/2 > doorRect.left &&
+      keyRect.left + keyRect.width/2 < doorRect.right &&
+      keyRect.top + keyRect.height/2 > doorRect.top &&
+      keyRect.top + keyRect.height/2 < doorRect.bottom) {
+    
+    const keyValue = parseInt(draggedKey.dataset.value);
+    const doorValue = questions[currentIndex].number;
+
+    if (doorValue % keyValue === 0) {
+      feedback.innerText = '門打開了！';
+      feedback.className = 'feedback-correct';
+      score++;
+    } else {
+      feedback.innerText = 'X！不能打開！';
+      feedback.className = 'feedback-incorrect';
+    }
+
+    scoreText.innerText = `分數：${score}`;
+    currentIndex++;
+    if (currentIndex < questions.length) {
+      setTimeout(showQuestion, 1200);
+    } else {
+      setTimeout(() => { feedback.innerText = `遊戲結束！總分：${score}`; }, 1200);
+    }
+  }
+}
+
+// 拖曳事件必須阻止預設
+document.addEventListener('dragover', e => e.preventDefault());
+
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+startGame();
+</script>
+</body>
+</html>
