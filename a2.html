@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鑰匙開門遊戲</title>
+<style>
+    body {
+        font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f0f7ff;
+    }
+    #game-container {
+        text-align: center;
+    }
+    #door {
+        width: 200px;
+        height: 300px;
+        background-color: #8b4513;
+        border: 5px solid #654321;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2em;
+        color: white;
+        user-select: none;
+    }
+    .key {
+        display: inline-block;
+        width: 60px;
+        height: 60px;
+        background-color: gold;
+        border: 2px solid #b8860b;
+        border-radius: 50%;
+        line-height: 60px;
+        font-size: 1.5em;
+        margin: 10px;
+        cursor: grab;
+        user-select: none;
+    }
+    #feedback {
+        font-size: 2em;
+        height: 50px;
+        margin-top: 20px;
+    }
+    .x-mark {
+        position: absolute;
+        font-size: 3em;
+        color: red;
+        animation: fadeOut 1s forwards;
+    }
+    @keyframes fadeOut {
+        0% {opacity: 1;}
+        100% {opacity: 0;}
+    }
+    .door-open {
+        background-color: #228B22 !important;
+    }
+</style>
+</head>
+<body>
+<div id="game-container">
+    <h1>鑰匙開門遊戲</h1>
+    <div id="door">?</div>
+    <div id="keys-container">
+        <!-- 鑰匙會動態生成 -->
+    </div>
+    <div id="feedback"></div>
+</div>
+
+<script>
+const door = document.getElementById('door');
+const keysContainer = document.getElementById('keys-container');
+const feedback = document.getElementById('feedback');
+
+// 題目清單
+const questions = [
+    { number: 12, keys: [2,3,4,5] },
+    { number: 15, keys: [2,3,5,7] },
+    { number: 20, keys: [2,3,4,6] },
+    { number: 9, keys: [2,3,4,5] },
+];
+
+let currentIndex = 0;
+
+function loadQuestion() {
+    const q = questions[currentIndex];
+    door.innerText = q.number;
+    keysContainer.innerHTML = '';
+
+    q.keys.forEach(num => {
+        const key = document.createElement('div');
+        key.classList.add('key');
+        key.innerText = num;
+        key.setAttribute('draggable', 'true');
+        key.dataset.value = num;
+        keysContainer.appendChild(key);
+
+        key.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', num);
+        });
+    });
+
+    door.addEventListener('dragover', e => {
+        e.preventDefault();
+    });
+
+    door.addEventListener('drop', e => {
+        e.preventDefault();
+        const keyValue = parseInt(e.dataTransfer.getData('text/plain'));
+        checkKey(keyValue);
+    });
+}
+
+function checkKey(keyValue) {
+    const doorNumber = parseInt(door.innerText);
+    if (doorNumber % keyValue === 0) {
+        feedback.innerText = "門打開了！✅";
+        door.classList.add('door-open');
+        setTimeout(() => {
+            feedback.innerText = '';
+            door.classList.remove('door-open');
+            currentIndex++;
+            if (currentIndex < questions.length) {
+                loadQuestion();
+            } else {
+                feedback.innerText = "全部完成！🎉";
+                keysContainer.innerHTML = '';
+                door.innerText = '';
+            }
+        }, 1000);
+    } else {
+        showX();
+    }
+}
+
+function showX() {
+    const x = document.createElement('div');
+    x.classList.add('x-mark');
+    x.innerText = '❌';
+    door.appendChild(x);
+    setTimeout(() => door.removeChild(x), 1000);
+}
+
+loadQuestion();
+</script>
+</body>
+</html>
